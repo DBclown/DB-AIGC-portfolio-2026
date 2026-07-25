@@ -1,0 +1,6 @@
+{
+  "name": "AIGC Creative Portfolio",
+  "description": "十年资深前端设计师的 AIGC 创意视觉与核心技术作品集。采用前卫复古 Neo-Brutalist 风格设计，包含平面美学、3D模型、ComfyUI工作流、LoRA微调与商业应用，融入丰富的设计巧思与可配置交互系统。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

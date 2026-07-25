@@ -1,0 +1,76 @@
+1H-dance_builder_v5
+工作流名称： dance_builder
+核心逻辑：
+输入参考 → VACE 首尾帧/面部/深度控制 → Wan 2.1 多LoRA 采样 → 2倍超分 + RIFE 插值
+技术栈：
+基座模型： Wan 2.1 T2V-14B (14B 参数大模型)
+LoRA 组合： MoviiGen (运动生成), DetailEnhancer (细节增强), 物理动态 LoRA (肢体自然度)
+精准控制： VACE 首尾帧控制, MediaPipe FaceMesh, DepthAnythingV2
+后处理： RealESRGAN_x2plus, RIFE VFI (输出 50fps)
+设计说明：
+本工作流基于 Wan 强大的大模型底座，通过堆叠专业 LoRA 解决了生成视频中肢体僵硬与物理失真的问题。利用 VACE 技术对视频的首尾帧状态、面部表情及空间透视进行精准约束，确保动作叙事连贯。最终经由超分与帧插值处理，直接输出清晰、流畅的舞蹈视频。
+
+1H-dance_extender_v5
+工作流名称：dance_extender
+核心逻辑：
+提取前序视频末帧 → 多模态 (深度/姿态/面部) 联合约束 → VACE 单向生成 (无尾帧模式) → 无缝视频续接
+技术栈：
+基座模型： Wan 2.1 T2V-14B
+核心控制： WanVideoVACEStartToEndFrame (首帧驱动延展), DepthAnythingV2, DWPreprocessor, MediaPipe-FaceMesh
+LoRA 组合： LightX2V, MoviiGen, DetailEnhancer, sh4rpn3ss, Jelly-Hips (动态与质感增强)
+设计说明：
+该工作流旨在突破原始视频的时长限制，实现高保真的画面续写。通过精确提取上一视频片段的最后一帧作为新生成序列的起始锚点，并结合深度、姿态及面部网格的严格约束，系统能够预测并生成符合物理逻辑与角色特征的后继动作。配合针对动态优化的 LoRA 组，确保延展部分在动作流畅度与视觉质感上与原片保持高度一致，适用于长镜头生成或循环视频制作。
+
+1H-WanVace_Background_trans_v2
+工作流： 视频背景迁移与重绘
+核心逻辑：
+加载视频与参考图 → 参考图背景分割 (RMBG) 生成遮罩 → Florence-2 自动反推环境提示词 → VACE 遮罩编码 → Wan 2.1 生成 → 音画合成
+技术栈：
+基座模型： Wan 2.1-14B (FusionX VACE)
+核心控制： VACE Masked Encoding (利用遮罩与参考图进行局部控制), Florence-2 (More Detailed Caption)
+图像处理： TransparentBG (RMBG 背景移除), InvertMask, MaskBlur+
+LoRA 组合： LightX2V, DetailEnhancer, Jelly-Hips
+设计说明：
+该工作流专注于视频背景的高保真替换与风格迁移。通过分析参考图像自动提取背景遮罩，并利用 Florence-2 智能反推场景描述，结合 Wan强大的 VACE 模块，在严格保留前景人物动态细节的同时，实现背景环境的无缝重绘。流程支持原视频音频直接合成，适用于影视后期背景替换或虚拟场景生成的快速制作。
+
+1H-wanvideo_Fun_2_2_control-loop_v3.2 
+工作流： Wan 2.2 Fun-Control 双模型级联循环视频生成
+核心逻辑：
+视频分段循环 → DW 密集姿态控制 → 双模型级联采样 → GIMM 帧插值 → 视频合成
+技术栈：
+基座模型： Wan 2.2 Fun-Control (A14B-HIGH & LOW FP8)
+核心控制： DWPreprocessor (DensePose 姿态), WanVideoControlEmbeds
+采样策略： Cascade Sampling (双模型级联：High 结构 + Low 细节), DPM++ SDE
+流程控制： Easy Loop (分段处理), GIMM-VFI (帧插值)
+设计说明：
+本工作流基于Wan 2.2 Fun-Control 架构，采用了 High/Low 双模型级联采样 策略。在循环分段处理过程中，利用 High 模型构建画面主体结构，再由 Low 模型进行细节填充，配合 DensePose 技术实现对视频姿态的精准控制。这种双引擎驱动的方式在保证高画质的同时显著提升了生成效率，末端经 GIMM 帧插值处理后，输出极致流畅的高帧率动态视频。
+
+basic_controlnet
+工作流： Openpose姿态控制
+核心逻辑：
+文本提示输入 → Openpose姿态检测 → 姿态引导生成 → 图像输出
+技术栈：
+基座模型： majicmixRealistic_v7.safetensors
+核心控制： Openpose (姿态骨架),
+设计说明：
+采用Openpose姿态检测技术实现对生成图像的精准姿态控制，展示基础 ControlNet的使用。
+
+basic_mask
+工作流： 智能抠图图像生成
+核心逻辑：
+文本提示输入 → 多ControlNet条件控制 → SAM智能抠图 → 图像生成 → 结果输出
+技术栈：
+基座模型： catCitronAnimeTreasure…
+核心控制： ControlNet (双模型并行控制), SAM (智能分割)
+设计说明：
+本工作流采用Multi-ControlNet架构，通过双ControlNet模块实现多维度条件控制，结合SAM智能抠图技术实现精准的图像生成，展示基础蒙版效果实现。
+
+Comfyui_in_PS
+工作流：Photoshop联动局部重绘
+核心逻辑：
+Photoshop数据输入 → 局部重绘生成 → 数据回传Photoshop输出
+技术栈：
+基座模型：catCitronAnimeTreasure (Checkpoint加载器)
+核心控制：SDPPP (Photoshop数据交互), comfyui-inpaint-cropandstitch (局部重绘), 
+设计说明：
+本工作流基于ComfyUI与Photoshop的联动设计，通过SDPPP模块实现从Photoshop获取文档、图层、选区等数据，结合局部重绘（inpaint-cropandstitch）技术对图像进行精准的区域生成与编辑。在生成过程中，利用CLIP文本编码器处理提示词，K采样器控制生成细节，VAE解码将潜在空间数据转换为图像，最终通过SDPPP将结果回传至Photoshop指定图层，实现跨软件的图像编辑流程。这种设计适合需要结合传统图像编辑软件与AI生成能力的场景，确保生成内容与现有作品的精准融合。
